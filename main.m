@@ -3,18 +3,18 @@ constants; wipt = WiPT;
 % Select the dataset
 % DATA_SeqTest4x;   % DATA_SeqTrain20x
 % Data_RandTest4x;  % Data_RandTrain20x
-DATA = Data_RandTrain20x;
+DATA = DATA_1Aug_Maya_12x;
 
 
 % Construct the CSI series from the selected experiment's CSV file
 fullcsv = readmatrix(csvfiles(DATA));
-csirange = csiranges(2*DATA-1):csiranges(2*DATA);%  1:251460;%   251460:315102;% 64502:315102;% 228660:540705;% 167714:228660;% 
-fullcsv = fullcsv(csirange, :);
+% csirange = csiranges(2*DATA-1):csiranges(2*DATA);%  1:251460;%   251460:315102;% 64502:315102;% 228660:540705;% 167714:228660;% 
+% fullcsv = fullcsv(csirange, :);
 % fullcsv = {fullcsv(1:64588, :), fullcsv(79142:141484, :), ...
 %     fullcsv(158891:221638, :), fullcsv(236212:298554, :)};
 % fullcsv = {fullcsv(64588:79142, :), fullcsv(141484:158891, :), ...
 %     fullcsv(221638:236212, :), fullcsv(298554:315102, :)};
-%-fullcsv = fullcsv(213560:268684, :); % 14-april mid-4x-split for validation
+% fullcsv = fullcsv(213560:268684, :); % 14-april mid-4x-split for validation
 %-fullcsv = {fullcsv(89187:213560, :), fullcsv(268684:389840, :)}; % 14-april 1st 10x & last 10x for training
 %-fullcsv = cat(1, fullcsv{:});
 H = fullcsv(:, 3:66); l = height(H);
@@ -45,22 +45,23 @@ true_counts = str2num(string(true_counts(DATA)))'; %#ok<ST2NM>
 % METHOD_TO_OPTIMIZE = { METHOD_OVERALL_AVG_THRESHOLD,
     % METHOD_LOCAL_AVG_THRESHOLD, METHOD_LOOK_AHEAD_DELTA,
     % METHOD_BASE_COUNTING}
-METHOD_TO_OPTIMIZE = METHOD_BASE_COUNTING;
-MAX_ITER = 300;
-MAX_TIME = 20 * 60; % in seconds
-if METHOD_TO_OPTIMIZE == METHOD_BASE_COUNTING
-    for t=[PITCH YAW ROLL THREE_FINGERS_OR_FIST V_SIGN OK_SIGN]
-        tag = t;
-        hyperparam_optim;
-    end
-else
-    for md=[METHOD_LOCAL_AVG_THRESHOLD METHOD_OVERALL_AVG_THRESHOLD]
-        METHOD_TO_OPTIMIZE = md;
-        hyperparam_optim;
-    end
-end
+METHOD_TO_OPTIMIZE = METHOD_LOCAL_AVG_THRESHOLD;
+% MAX_ITER = 1000;
+% MAX_TIME = 24 * 60 * 60; % in seconds
+% if METHOD_TO_OPTIMIZE == METHOD_BASE_COUNTING
+%     for t=[PITCH YAW ROLL THREE_FINGERS_OR_FIST V_SIGN OK_SIGN]
+%         tag = t;
+%         hyperparam_optim;
+%     end
+% else
+%     for md=[METHOD_LOCAL_AVG_THRESHOLD METHOD_OVERALL_AVG_THRESHOLD]
+%         METHOD_TO_OPTIMIZE = METHOD_LOCAL_AVG_THRESHOLD; % md;
+%         hyperparam_optim;
+%     end
+% end
 
 
+plotSegmentedResult(H, wipt, 2,2,5, 100,19, 2, METHOD_LOCAL_AVG_THRESHOLD, true_labels, 0, 0); % Rand-train-LA
 % plotSegmentedResult(H, wipt, 7,10,22, 100,22, 5, METHOD_LOCAL_AVG_THRESHOLD, true_labels, 0, 0); % Rand-train-LA
 % plotSegmentedResult(H, wipt, 3, 3, 6, 100,19, 4, -1, METHOD_LOCAL_AVG_THRESHOLD, true_labels, 0, 0); % Seq-train-LA
 % plotSegmentedResult(H, wipt, 3, 3, 3, 100,23, 2, METHOD_LOCAL_AVG_THRESHOLD, true_labels, 0, 0); % Seq-train-LA
@@ -92,10 +93,10 @@ global TAG_ACT;
 
     i=1;
     while i<=l
-        if X(i)==TAG_NONACT
+        if X(i)==TAG_ACT
             last = i;
             for j=i:1:l
-                if X(j)~=TAG_NONACT
+                if X(j)~=TAG_ACT
                     last = j;
                     break;
                 end
@@ -121,7 +122,7 @@ global TAG_ACT;
 end
 
 
-function plotDurationError(X, true_labels)
+function plotDurationError(X, true_labels) %#ok<DEFNU> 
 global TAG_ACT;
     l = height(X);
     durations = zeros(1,2);
@@ -172,7 +173,7 @@ global TAG_ACT;
     dd = durations(:,2); % dd(dd<1) = 12;
     tdd = true_durations(:,2); % dd(dd<1) = 12;
     ps=plot(xaxis, dd, 'LineWidth', 2); set(gca, 'FontSize', 14);
-    % ps = scatter(xaxis, ); set(gca, 'FontSize', 14);
+    % ps = scatter(xaxis, dd); set(gca, 'FontSize', 14);
     xlabel('Activity Segment Number'); ylabel('Action Duration (seconds)');
     pp = plot(xaxis, tdd, 'Color','red', 'LineWidth', 2);set(gca, 'FontSize', 14);
     legend([ps;pp], 'Predicted Duration', 'Actual Duration', ...
@@ -183,12 +184,15 @@ global TAG_ACT;
 end
 
 function plotCountsByGroundTruths(H, wipt, windowSize, startPC, numPC, ...
-    numRepAvg, tag, true_action_labels, true_counts)
+    numRepAvg, tag, true_action_labels, true_counts) %#ok<DEFNU> 
     [Pw, ~] = wipt.getAveragePCASeries(H, startPC, numPC, numRepAvg, windowSize);
     [count_acc, bars]=wipt.CountReps(Pw, tag, true_action_labels, true_counts);
     disp(count_acc);
 
     diffs = abs(bars(:,2)-bars(:,1)); % |true-pred|
+    disp(mean(diffs));
+    disp(std(diffs));
+
     ape = zeros(height(diffs), 1);
     for i=1:height(diffs)
         ape(i) = (100 * diffs(i)) / bars(i, 2);
@@ -207,7 +211,7 @@ function plotCountsByGroundTruths(H, wipt, windowSize, startPC, numPC, ...
 %     set(gca, 'FontSize', 10);
 %     xlabel('Segment'); ylabel('Counts');
 
-    figure('Name', figName,'units','points', 'Position', [500,500,132,136]);
+    fig = figure('Name', figName,'units','points', 'Position', [634,500,132,136]);
 %     model = fitlm(bars(:,2), bars(:,1));
 %     for x=0:20
 %         h = height(bars) + 1;
@@ -242,7 +246,10 @@ constants;
     end
     pred_segs = getSegments(X, warmup_offset, cooldown_offset);
     true_segs = getSegments(true_labels, warmup_offset, cooldown_offset);
+    true_segs = true_segs(1:144,:);
     % diffs = true_segs - pred_segs;
+
+    % plotDurations(X);
 
 
     bestF1=0; bestAcc=0;
@@ -255,7 +262,7 @@ constants;
     end
     Pw = Pw(~all(isnan(Pw),2));
 
-    fig = figure;
+    fig = figure;% 211400, 47816-61334
     hold on;
     ppw = plot((Pw-mean(Pw))/5, 'Color','blue', 'LineWidth', 1);
     set(gca, 'FontSize', 14);

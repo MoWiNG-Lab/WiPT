@@ -10,8 +10,11 @@ function [Pw, explained] = getAveragePCASeries(~, H, pc_start, p, n, w)
     end
     Pw = zeros(height(Pw_temp), 1);
     for etao = 1:1:n
-        for i=1:1:(l-w)
-            Pw(min(l, i+w/2)) = mean(Pw_temp(i:min(l, i+w)));
+        for i=1:1:(l-w/2)
+            a = max(1, i-w/2);
+            b = min(l, i+w/2);
+            Pw(i) = mean(Pw_temp(a:b));
+            % Pw(min(l, i+w/2)) = mean(Pw_temp(i:min(l, i+w)));
         end
         Pw_temp = Pw;
     end

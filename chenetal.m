@@ -1,13 +1,13 @@
 clc; clear; constants; wipt = WiPT;  % close all; 
 % Select the dataset: Data_RandTest4x, Data_RandTrain20x
-DATA = Data_RandTrain20x;
+DATA = Data_RandTest4x;
 
 
 % Construct the CSI series from the selected experiment's CSV file
 fullcsv = readmatrix(csvfiles(DATA));
-% csirange = csiranges(2*DATA-1):csiranges(2*DATA); fullcsv = fullcsv(csirange, :);
-fullcsv = {fullcsv(89187:213560, :), fullcsv(268684:389840, :)}; % 14-april 1st 10x & last 10x for training
-fullcsv = cat(1, fullcsv{:});
+csirange = csiranges(2*DATA-1):csiranges(2*DATA); fullcsv = fullcsv(csirange, :);
+%fullcsv = {fullcsv(89187:213560, :), fullcsv(268684:389840, :)}; % 14-april 1st 10x & last 10x for training
+%fullcsv = cat(1, fullcsv{:});
 H = fullcsv(:, 3:66);
 
 % Prepare the true-labels
@@ -28,50 +28,59 @@ filter(b, 1, H);
 % 3. PCA
 [coeff, ~, ~, ~, explained] = pca(H); % coeff = S
 P = H * coeff(:, 1:3); % space of k eigenvectors & k=3
+%P = mean(P(1:height(P),:));
 
 
 % 4. dynamic adaptive sliding window (T1/T1_new & T2/T2_new algo. impl.)
 
-alpha = 0.5; %% TODO opimize it within 0.1~0.9
-%(1) compute series of T1s as per T1=alpha * T1cur + (1-alpha) * T1new,
-%length(T1) = 2 minutes = 120 seconds = 12000 CSI frames {T1cur=init? , T1new=var(W1)?}
-%    as well as, T2s, where length(T2)=length(T1)/6
-T1 = calculateThreshold(P, alpha, 1, 12000);
-T2 = calculateThreshold(P, alpha, 1, 12000/6);
-
-%(2) implement Algorithm-1
-L = 300;
-l = L/6;
-startPoints = zeros(h, 1); sp = 1; 
-endPoints = zeros(h, 1); ep = 1;
-for i=L/2+1:L:h-L/2+1
-    if(var(P(i-L/2:i))<mean(T1(i-L/2:i)) && ...
-            var(P(i:i+L/2))>mean(T1(i:i+L/2)))
-        if(var(P(i-l/2:i))<mean(T2(i-l/2:i)) && ...
-                var(P(i:i+l/2))>mean(T2(i:i+l/2)))
-            startPoints(sp) = i;
-            sp = sp + 1;
+for alpha = 0.1:0.1:0.9 %% TODO opimize it within 0.1~0.9
+    %(1) compute series of T1s as per T1=alpha * T1cur + (1-alpha) * T1new,
+    %length(T1) = 2 minutes = 120 seconds = 12000 CSI frames {T1cur=init? , T1new=var(W1)?}
+    %    as well as, T2s, where length(T2)=length(T)1)/6
+    f = 40/300;
+    T1 = calculateThreshold(P, alpha, var(P(1:12000)), 12000);
+    T2 = calculateThreshold(P, alpha, var(P(1:12000*f)), 12000*f);
+    % figure; plot(T1); hold on; plot(T2); plot(P);
+    
+    %(2) implement Algorithm-1
+    L = 300;
+    l = 40;
+    startPoints = zeros(h, 1); sp = 1; 
+    endPoints = zeros(h, 1); ep = 1;
+    for i=L/2+1:L:h-L/2+1
+        if(var(P(i-L/2:i))<mean(T1(i-L/2:i)) && ...
+                var(P(i:i+L/2))>mean(T1(i:i+L/2)))
+            if(var(P(i-l/2:i))<mean(T2(i-l/2:i)) && ...
+                    var(P(i:i+l/2))>mean(T2(i:i+l/2)))
+                startPoints(sp) = i;
+                sp = sp + 1;
+            end
+        end
+        if(var(P(i-L/2:i))>mean(T1(i-L/2:i)) && ...
+                var(P(i:i+L/2))<mean(T1(i:i+L/2)))
+            if(var(P(i-l/2:i))>mean(T2(i-l/2:i)) && ...
+                    var(P(i:i+l/2))<mean(T2(i:i+l/2)))
+                endPoints(ep) = i;
+                ep = ep + 1;
+            end
         end
     end
-    if(var(P(i-L/2:i))>mean(T1(i-L/2:i)) && ...
-            var(P(i:i+L/2))<mean(T1(i:i+L/2)))
-        if(var(P(i-l/2:i))>mean(T2(i-l/2:i)) && ...
-                var(P(i:i+l/2))<mean(T2(i:i+l/2)))
-            endPoints(ep) = i;
-            ep = ep + 1;
-        end
-    end
+    fprintf("alpha=%.1f --> #Start: %d, #End: %d\n", alpha, ...
+       sp-1, ep-1);
 end
 true_segments = getSegments(true_labels);
+fprintf("Number of True Segments: %d\n", height(true_segments));
+fprintf("Complete");
+
 
 
 
 function T = calculateThreshold(P, alpha, Tcur, t_length)
     T = zeros(height(P), 1);
-    for t=1:t_length:height(T)
+    for t=t_length+1:t_length:height(T)
         t_end = t+t_length-1;
         % T1=alpha * T1cur + (1-alpha) * T1new,
-        Tnew = mean(P(t:t_end)); % var(P(t:t_end));
+        Tnew = var(P(t:t_end));
         T(t:t_end) = alpha * Tcur + (1-alpha) * Tnew;
         Tcur = T(t:t_end);
     end

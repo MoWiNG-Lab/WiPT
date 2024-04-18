@@ -1,0 +1,15 @@
+data/11_csi_amps_19_lab.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/14_csi_amps_22_ofc.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/20_csi_amps_29_br.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/6_csi_amps_12_lr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/10_csi_amps_18_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/16_csi_amps_24_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/18_csi_amps_26_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/19_csi_amps_28_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/1_csi_amps_1_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/13_csi_amps_21_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/15_csi_amps_23_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/17_csi_amps_25_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/12_csi_amps_20_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/2_csi_amps_5_cfr.csv.zip filter=lfs diff=lfs merge=lfs -text
+data/3_csi_amps_7_lab.csv.zip filter=lfs diff=lfs merge=lfs -text
